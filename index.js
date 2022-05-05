@@ -1,12 +1,21 @@
 const tmi = require("tmi.js");
 const fs = require("fs");
+const filter = require("leo-profanity");
+const fetch = require("node-fetch");
+const crypto = require("crypto");
 
 require("dotenv").config();
+
+const createSignature = (stringToSign) => {
+  const hash = crypto.createHmac('sha256', process.env.WEBHOOK_SECRET)
+    .update(stringToSign).digest('hex');
+  return hash;
+}
 
 const commands = {
   question: {
     response: (argument) => {
-      return `Successfully added "${argument}" to the list of questions.`;
+      return `${argument}, Successfully added your question to the list of questions.`;
     },
   },
 };
@@ -31,14 +40,33 @@ client.on("message", async (channel, tags, message, self) => {
   if (message.startsWith("!question")) {
     const argument = message.split("!question ")[1];
     if (!argument) {
-        return client.say(channel, `@${tags.username} please provide a question after the command!`);
+      return client.say(channel, `@${tags.username} please provide a question after the command!`);
     };
-    
+
+    if (filter.check(argument)) {
+      return client.say(channel, `@${tags.username} your message contains profanity!`);
+    }
+
     try {
-        const question = await fs.appendFileSync("./questions/questions.txt", `${tags.username} - ${argument}\n`);
-        client.say(channel, commands.question.response(argument));
+      const body = {
+        username: tags.username,
+        text: argument
+      }
+      const signature = createSignature(JSON.stringify(body))
+      const response = await fetch('http://localhost:3000/create', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'X-Hub-Signature-256': signature }
+      });
+      if (response.status !== 200) {
+        throw new Error('Something went wrong')
+      }
+      const data = await response.json();
+
+      client.say(channel, commands.question.response(`@${tags.username}`));
     } catch (error) {
-        console.log(error);
+      // do something
+      console.log(error);
     }
   }
 });

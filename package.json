@@ -6,10 +6,14 @@
   "author": "masonschafercodes",
   "license": "MIT",
   "scripts": {
-    "start": "node index.js"
+    "start": "nodemon index.js"
   },
   "dependencies": {
+    "crypto": "^1.0.1",
     "dotenv": "^16.0.0",
+    "leo-profanity": "^1.5.0",
+    "node-fetch": "2",
+    "nodemon": "^2.0.16",
     "tmi.js": "^1.8.5"
   }
 }
